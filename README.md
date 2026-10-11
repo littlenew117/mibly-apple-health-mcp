@@ -9,7 +9,7 @@ An open-source **Apple Health MCP server**: bring your Apple Health (HealthKit) 
 ## Quickest way to get started
 
 1. **Download Mibly** on your iPhone → [App Store](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
-2. **Copy the setup prompt** from [mibly.app](https://mibly.app/) <!-- TODO: replace with the exact prompt page URL --> and paste it into your agent.
+2. **Copy the setup prompt** from inside the Mibly app (Connection Settings → "Copy for your Agent") and paste it into your agent.
 
 Your agent sets up the receiver and MCP service for you. No cloning, no building, no config files.
 

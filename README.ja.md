@@ -11,7 +11,7 @@
 ## いちばん簡単な始め方
 
 1. iPhone で **Mibly をダウンロード** → [App Store](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
-2. [mibly.app](https://mibly.app/) <!-- TODO: replace with the exact prompt page URL --> から **セットアップ用プロンプトをコピー**して、お使いの AI に貼り付けます。
+2. Mibly アプリ内(接続設定 →「AI用にコピー」)から **セットアップ用プロンプトをコピー**して、お使いの AI に貼り付けます。
 
 AI が Receiver と MCP サービスをセットアップします。クローンもビルドも設定ファイルの編集も不要です。
 

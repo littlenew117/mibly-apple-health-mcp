@@ -11,7 +11,7 @@
 ## 最快上手方式
 
 1. **在 iPhone 上下载 Mibly** → [App Store](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
-2. **复制安装提示词**:来自 [mibly.app](https://mibly.app/) <!-- TODO: replace with the exact prompt page URL -->,粘贴给你的 Agent。
+2. **复制安装提示词**:在 Mibly App 里(连接设置 →「复制,发给 Agent」)复制,然后粘贴给你的 Agent。
 
 Agent 会替你搭好 Receiver 和 MCP 服务。无需克隆、无需构建、无需手写配置文件。
 
