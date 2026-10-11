@@ -50,7 +50,7 @@ npm run build
 MIBLY_TOKEN=<token from the Mibly app> npm start
 ```
 
-On first run the token is saved to `~/.mibly/config.json` (mode 0600), so later restarts need no env var. Then enter `<this machine's LAN IP>:7345` in the app's Target Host field (just `IP:port`, no `http://`, no path).
+On first run the token is saved to `~/.mibly/config.json` (mode 0600), so later restarts need no env var. On startup the receiver prints the address(es) to use, e.g. `Target Host to enter in Mibly: 192.168.1.24:7345 (en0)`. Enter that in the app's Target Host field (just `IP:port`, no `http://`, no path); pick the address on your Wi-Fi/LAN if several are listed.
 
 | Variable | Meaning | Default |
 |---|---|---|

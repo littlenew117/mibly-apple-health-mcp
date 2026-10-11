@@ -51,6 +51,25 @@ after(async () => {
   rmSync(home, { recursive: true, force: true });
 });
 
+describe("startup output", () => {
+  it("prints a Target Host line the user can copy, never the token", async () => {
+    const out = await new Promise<string>((resolve) => {
+      const p = spawn(process.execPath, ["--import", "tsx", "src/index.ts"], {
+        env: { ...process.env, HOME: mkdtempSync(join(tmpdir(), "mibly-receiver-")), MIBLY_TOKEN: TOKEN, MIBLY_HOST: `127.0.0.1:${PORT + 1}` },
+        stdio: ["ignore", "ignore", "pipe"],
+      });
+      let buf = "";
+      p.stderr!.on("data", (d) => {
+        buf += d;
+        if (buf.includes("Target Host")) (p.kill(), resolve(buf));
+      });
+    });
+    assert.match(out, /Target Host to enter in Mibly/);
+    assert.match(out, new RegExp(`127\\.0\\.0\\.1:${PORT + 1}`));
+    assert.ok(!out.includes(TOKEN));
+  });
+});
+
 describe("auth", () => {
   for (const [name, headers] of [
     ["missing token", {}],

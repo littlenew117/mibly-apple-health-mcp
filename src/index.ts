@@ -1,3 +1,4 @@
+import { networkInterfaces } from "node:os";
 import express, { type ErrorRequestHandler } from "express";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -43,8 +44,25 @@ const onError: ErrorRequestHandler = (err, _req, res, next) => {
 };
 app.use(onError);
 
+// The bind address (0.0.0.0) is not something the iPhone can use, so also print the
+// addresses it can: one line per network interface this machine has an IPv4 on.
+function reachableAddresses(bind: string): string[] {
+  if (bind && bind !== "0.0.0.0") return [bind];
+  return Object.entries(networkInterfaces()).flatMap(([name, infos]) =>
+    (infos ?? [])
+      .filter((i) => i.family === "IPv4" && !i.internal && !i.address.startsWith("169.254."))
+      .map((i) => `${i.address} (${name})`)
+  );
+}
+
 app.listen(port, bindHost || "0.0.0.0", () => {
   console.error(`[mibly-apple-health-mcp] listening on ${bindHost || "0.0.0.0"}:${port} (POST /ingest, GET /status, POST /mcp)`);
+  const addrs = reachableAddresses(bindHost);
+  console.error(
+    addrs.length
+      ? `[mibly-apple-health-mcp] Target Host to enter in Mibly (pick the address on your Wi-Fi/LAN):\n${addrs.map((a) => `  ${a.replace(" ", `:${port} `)}`).join("\n")}`
+      : "[mibly-apple-health-mcp] no network address found; connect to a network, then enter <this machine's IP>:" + port + " in Mibly"
+  );
 });
 
 // Optional: also serve the same tools over stdio for agents that spawn MCP servers (e.g. Claude Desktop).
