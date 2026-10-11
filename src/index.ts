@@ -8,7 +8,7 @@ import { createMcpServer } from "./mcp.js";
 import { HealthStore } from "./store.js";
 
 const { token, salt, host, freshStore } = resolveConfig();
-if (freshStore) console.error("[mibly-receiver] new or changed pairing token: starting with an empty store");
+if (freshStore) console.error("[mibly-apple-health-mcp] new or changed pairing token: starting with an empty store");
 const store = new HealthStore(token, salt, freshStore);
 
 const [bindHost, portRaw] = host.split(":");
@@ -44,7 +44,7 @@ const onError: ErrorRequestHandler = (err, _req, res, next) => {
 app.use(onError);
 
 app.listen(port, bindHost || "0.0.0.0", () => {
-  console.error(`[mibly-receiver] listening on ${bindHost || "0.0.0.0"}:${port} (POST /ingest, GET /status, POST /mcp)`);
+  console.error(`[mibly-apple-health-mcp] listening on ${bindHost || "0.0.0.0"}:${port} (POST /ingest, GET /status, POST /mcp)`);
 });
 
 // Optional: also serve the same tools over stdio for agents that spawn MCP servers (e.g. Claude Desktop).

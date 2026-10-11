@@ -1,30 +1,36 @@
-# mibly-receiver
+# Apple Health MCP — Mibly Receiver
 
-Reference **Local** receiver and MCP server for the [Mibly](https://mibly.app) iPhone app.
+Bring your Apple Health data (sleep, steps, heart rate, HRV, workouts, weight, body fat, and more) into any MCP-compatible AI agent.
 
-Mibly reads Apple Health on your iPhone and pushes it over your own network to a small
-service that **you** run. This repository is that service, in about 250 lines of
-TypeScript, so you can read exactly where your data goes.
+## Quickest way to get started
 
-It does three things:
+1. **Download Mibly** on your iPhone → [App Store](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
+2. **Copy the setup prompt** from [mibly.app](https://mibly.app/) <!-- TODO: replace with the exact prompt page URL --> and paste it into your agent.
 
-1. `POST /ingest`: receives samples pushed by the iPhone.
-2. Stores them **encrypted on the machine it runs on** (`~/.mibly/data.enc`).
-3. Exposes them to an AI agent through MCP (`POST /mcp`, tools `health_now` and `health_detail`).
+Your agent sets up the receiver and MCP service for you. No cloning, no building, no config files.
 
-This is the same protocol the Mibly app's "Agent setup prompt" asks an agent to build.
-This repo is a ready-made, reviewable implementation of it. See [PROTOCOL.md](PROTOCOL.md).
-Mibly's optional Cloud mode is a separate product and is not part of this repository.
+## Why an iPhone app?
+
+Apple Health data can only be read through HealthKit, inside a native iOS app. There is no web API. Mibly handles the HealthKit side — permissions, background sync, and data formatting — so you don't need an Apple Developer account or Xcode.
+
+## What this repository is
+
+A reference implementation of the receiver your agent installs. It's here so you can:
+
+- **Review** exactly what runs on your machine and where your data goes
+- **Customize** it if you want to
+
+You don't need this code to use Mibly. The setup prompt above is the recommended path.
 
 ## Where does the data go?
 
 | Question | Answer |
 |---|---|
 | Where is health data stored? | `~/.mibly/data.enc` only. AES-256-GCM, key = scrypt(pairing token, random salt). |
-| Does the service make outbound network requests? | No. It only listens. It has no telemetry and no update check. |
+| Does the service make outbound network requests? | No. It only listens. No telemetry, no update check. |
 | Who can read it over the network? | Anyone holding the pairing token. Every route requires `Authorization: Bearer <token>`. |
 | How long is it kept? | 30 days of history (max 25,000 samples). Only the latest sample per type is kept longer. |
-| Is traffic encrypted in transit? | **No.** The iPhone talks plain HTTP, intended for a trusted LAN or VPN. Do not expose the port to the public internet. |
+| Is traffic encrypted in transit? | **No.** The iPhone talks plain HTTP, intended for a trusted LAN or VPN. Don't expose the port to the public internet. |
 
 Check it yourself. This should print nothing:
 
@@ -32,7 +38,9 @@ Check it yourself. This should print nothing:
 grep -rnE "fetch\(|https?\.request|axios|net\.connect|XMLHttpRequest" src
 ```
 
-## Run
+The wire protocol (endpoints, payloads, storage format) is in [PROTOCOL.md](PROTOCOL.md); the threat model is in [SECURITY.md](SECURITY.md).
+
+## Run it yourself
 
 Requires Node.js 18+.
 
@@ -42,42 +50,36 @@ npm run build
 MIBLY_TOKEN=<token from the Mibly app> npm start
 ```
 
-On first run the token is saved to `~/.mibly/config.json` (mode 0600), so later restarts
-need no env var. Then enter `<this machine's LAN IP>:7345` in the app's Target Host field
-(just `IP:port`, no `http://` and no path).
+On first run the token is saved to `~/.mibly/config.json` (mode 0600), so later restarts need no env var. Then enter `<this machine's LAN IP>:7345` in the app's Target Host field (just `IP:port`, no `http://`, no path).
 
 | Variable | Meaning | Default |
 |---|---|---|
 | `MIBLY_TOKEN` | Pairing token from the app | saved config |
 | `MIBLY_HOST` | Bind address `host:port` | `0.0.0.0:7345` |
 
-Connect an MCP client (HTTP) to `http://<ip>:7345/mcp` with header
-`Authorization: Bearer <token>`. For agents that spawn MCP servers over stdio, run with
-`--stdio` as well (logs go to stderr).
+Connect an MCP client over HTTP to `http://<ip>:7345/mcp` with the header `Authorization: Bearer <token>`. For agents that spawn MCP servers over stdio, add `--stdio` (logs go to stderr).
 
-If you regenerate the token in the app, restart with the new `MIBLY_TOKEN`. The old
-encrypted store cannot be decrypted by the new key, so the receiver starts empty.
+If you regenerate the token in the app, restart with the new `MIBLY_TOKEN`. The old encrypted store can't be decrypted with the new key, so the receiver starts empty.
 
-## Layout
+Code map: `src/index.ts` (routes) · `src/auth.ts` (token check) · `src/config.ts` (`~/.mibly/config.json`) · `src/ingest.ts` (validation) · `src/store.ts` (encryption, retention, queries) · `src/mcp.ts` (the two tools). Run the tests with `npm test`.
 
-| File | Role |
-|---|---|
-| `src/index.ts` | HTTP server and routes |
-| `src/auth.ts` | Bearer token check (constant time) |
-| `src/config.ts` | `~/.mibly/config.json` |
-| `src/ingest.ts` | Payload validation |
-| `src/store.ts` | Encryption, retention, queries |
-| `src/mcp.ts` | The two MCP tools |
+## Local vs Cloud
 
-## Test
+| | Local (Free) | Cloud (Pro) |
+|---|---|---|
+| Data path | iPhone → an agent environment you control | iPhone → Mibly Cloud → your agents |
+| Remote access across devices | — | ✓ |
+| Multiple agents on the same data | — | ✓ |
+| Menstrual cycle data | Available (off by default) | Never uploaded |
 
-```sh
-npm test
-```
+This repository covers Local only. You choose which data types are shared and can turn each one off at any time.
 
-Starts the real server against a temporary `$HOME` and checks auth, validation,
-the MCP handshake and tools, retention, the on-disk format, restart and token rotation.
+## Notes
+
+- Mibly does not diagnose or make medical decisions. It only gives your agent access to the data you choose to share.
+- Issues in this repo are for the receiver code. For app support, see [mibly.app](https://mibly.app/).
+- Privacy policy: https://mibly.app/privacy/
 
 ## License
 
-MIT. See [SECURITY.md](SECURITY.md) for the threat model.
+MIT <!-- TODO: confirm license -->
