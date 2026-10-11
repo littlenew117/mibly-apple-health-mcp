@@ -1,6 +1,8 @@
 # Apple Health MCP — Mibly Receiver
 
-Bring your Apple Health data (sleep, steps, heart rate, HRV, workouts, weight, body fat, and more) into any MCP-compatible AI agent.
+An open-source **Apple Health MCP server**: bring your Apple Health (HealthKit) data — sleep, steps, heart rate, HRV, workouts, weight, body fat, and more — into Claude, ChatGPT, or any MCP-compatible AI agent.
+
+**Local mode: your data never touches Mibly's servers.** No account, no cloud, no telemetry. It is stored encrypted on a machine you control, and this repository is the code that does it.
 
 ## Quickest way to get started
 
