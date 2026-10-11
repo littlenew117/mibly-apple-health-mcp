@@ -88,4 +88,4 @@ MCP クライアントは `http://<ip>:7345/mcp` に HTTP で接続し、ヘッ�
 
 ## ライセンス
 
-MIT <!-- TODO: confirm license -->
+MIT

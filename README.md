@@ -86,4 +86,4 @@ This repository covers Local only. You choose which data types are shared and ca
 
 ## License
 
-MIT <!-- TODO: confirm license -->
+MIT

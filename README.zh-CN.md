@@ -88,4 +88,4 @@ MCP 客户端通过 HTTP 连接 `http://<ip>:7345/mcp`,并带上请求头 `Autho
 
 ## 许可证
 
-MIT <!-- TODO: confirm license -->
+MIT
