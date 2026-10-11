@@ -1,3 +1,5 @@
+[English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
+
 # Apple Health MCP — Mibly Receiver
 
 An open-source **Apple Health MCP server**: bring your Apple Health (HealthKit) data — sleep, steps, heart rate, HRV, workouts, weight, body fat, and more — into Claude Desktop/Code, Codex, or any other AI agent you build or run yourself (anything that speaks MCP).
