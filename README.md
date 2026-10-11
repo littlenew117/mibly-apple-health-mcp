@@ -30,7 +30,7 @@ You don't need this code to use Mibly. The setup prompt above is the recommended
 | Does the service make outbound network requests? | No. It only listens. No telemetry, no update check. |
 | Who can read it over the network? | Anyone holding the pairing token. Every route requires `Authorization: Bearer <token>`. |
 | How long is it kept? | 30 days of history (max 25,000 samples). Only the latest sample per type is kept longer. |
-| Is traffic encrypted in transit? | **No.** The iPhone talks plain HTTP, intended for a trusted LAN or VPN. Don't expose the port to the public internet. |
+| Is traffic encrypted in transit? | **No.** Local mode is designed for your home or office LAN: the iPhone and this receiver sit on the same Wi-Fi and talk plain HTTP. Don't expose the port to the public internet. |
 
 Check it yourself. This should print nothing:
 

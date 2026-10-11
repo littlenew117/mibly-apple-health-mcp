@@ -8,7 +8,7 @@
 - **Does not protect against:** anyone on the network path (traffic is plain HTTP, which is what the
   iPhone app speaks), or anyone who can read `~/.mibly/config.json`. That file holds the token
   in plaintext, and the data key is derived from it. Treat it like an SSH private key.
-- Run it on a trusted LAN or a VPN. Do not forward the port to the public internet.
+- Local mode is designed for a local network: the iPhone and the receiver on the same LAN. Do not forward the port to the public internet. (A VPN that makes both devices appear on one private network also works.)
 
 ## Data flow
 
