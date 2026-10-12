@@ -1,5 +1,12 @@
 [English](README.md) · **简体中文** · [日本語](README.ja.md)
 
+[![Download on the App Store](https://img.shields.io/badge/App_Store-Mibly-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
+[![Release](https://img.shields.io/github/v/release/littlenew117/mibly-apple-health-mcp)](https://github.com/littlenew117/mibly-apple-health-mcp/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/littlenew117/mibly-apple-health-mcp/ci.yml?branch=main&label=CI)](https://github.com/littlenew117/mibly-apple-health-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-6E56CF)](https://modelcontextprotocol.io)
+[![Website](https://img.shields.io/badge/website-mibly.app-black)](https://mibly.app)
+
 > 以英文版 [README.md](README.md) 为准。
 
 # Apple Health MCP — Mibly Receiver
