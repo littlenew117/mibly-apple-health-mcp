@@ -23,6 +23,39 @@ function decrypt(key: Buffer, blob: Buffer): string {
 
 const empty = (): StoreSnapshot => ({ latest: {}, history: [], lastPushAt: null });
 
+// Unparseable timestamps sort first and never win `latest`.
+const time = (iso: string) => {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? -Infinity : t;
+};
+
+/**
+ * Identity of a sample: its `sampleId` when the phone sent one, otherwise type+start+end.
+ * Timestamps are compared as instants, so `Z` and `+00:00` spellings are the same key.
+ */
+export function dedupeKey(s: HealthSample): string {
+  if (s.sampleId) return `id:${s.sampleId}`;
+  const instant = (iso: string) => (Number.isNaN(Date.parse(iso)) ? iso : String(Date.parse(iso)));
+  return `${s.type}|${instant(s.start)}|${instant(s.end)}`;
+}
+
+/** True when `a` should be the `latest` over `b`: greater end, then greater start; on a full tie the newer arrival wins. */
+function isNewerOrSame(a: HealthSample, b: HealthSample): boolean {
+  return time(a.end) > time(b.end) || (time(a.end) === time(b.end) && time(a.start) >= time(b.start));
+}
+
+/** Reported by GET /status so the Mibly app knows which protocol features this receiver has. */
+export const RECEIVER_VERSION = "1.2.0";
+export const CAPABILITIES = [
+  "bodyFat",
+  "restingHeartRate",
+  "walkingHeartRateAverage",
+  "heartRateSummary",
+  "sampleIdUpsert", // same sampleId (or type+start+end) replaces instead of duplicating
+  "latestByEnd",
+  "backfill", // safe to receive ~7 days of history after pairing
+] as const;
+
 export class HealthStore {
   private key: Buffer;
   private snapshot: StoreSnapshot;
@@ -44,13 +77,27 @@ export class HealthStore {
   }
 
   ingest(samples: HealthSample[]): void {
+    // One stored entry per dedupe key. A repeat replaces the earlier entry in place
+    // (the phone re-sends an in-progress hour or today's steps with updated values).
+    const index = new Map<string, number>();
+    this.snapshot.history.forEach((s, i) => index.set(dedupeKey(s), i));
     for (const sample of samples) {
-      this.snapshot.latest[sample.type] = sample;
-      this.snapshot.history.push(sample);
+      const key = dedupeKey(sample);
+      const at = index.get(key);
+      if (at === undefined) {
+        index.set(key, this.snapshot.history.push(sample) - 1);
+      } else {
+        this.snapshot.history[at] = sample;
+      }
+      // `latest` is the sample with the greatest end, then the greatest start, no
+      // matter what order samples arrive in (a backfill must not overwrite it).
+      const current = this.snapshot.latest[sample.type];
+      if (!current || isNewerOrSame(sample, current)) this.snapshot.latest[sample.type] = sample;
     }
     const cutoff = Date.now() - RETENTION_DAYS * DAY_MS;
     this.snapshot.history = this.snapshot.history
       .filter((s) => new Date(s.end).getTime() >= cutoff)
+      .sort((a, b) => time(a.start) - time(b.start) || time(a.end) - time(b.end))
       .slice(-MAX_HISTORY);
     this.snapshot.lastPushAt = new Date().toISOString();
     writeFileSync(dataPath(), encrypt(this.key, JSON.stringify(this.snapshot)), { mode: 0o600 });
@@ -75,6 +122,8 @@ export class HealthStore {
 
   status() {
     return {
+      version: RECEIVER_VERSION,
+      capabilities: CAPABILITIES,
       lastPushAt: this.snapshot.lastPushAt,
       lastQueryAt: this.lastQuery?.at ?? null,
       lastQueryTool: this.lastQuery?.tool ?? null,

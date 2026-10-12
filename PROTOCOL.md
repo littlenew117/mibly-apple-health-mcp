@@ -28,21 +28,44 @@ JSON body, up to 2 MB:
 ```
 
 - Required per sample: `type`, `start`, `end` (strings), `value` (number), `unit` (string). Optional: `source`.
-- `type` is one of: `sleep`, `steps`, `heartRate`, `hrv`, `workout`, `weight`, `bodyFat`, `menstrualFlow`.
+- `type` is one of: `sleep`, `steps`, `heartRate`, `restingHeartRate`, `walkingHeartRateAverage`, `hrv`, `workout`, `weight`, `bodyFat`, `menstrualFlow`.
+  A sample with any other `type` is skipped (not stored) and does not fail the batch; the response lists it in `rejectedTypes`.
+- Optional `sampleId` (string): the phone's stable identity for the sample. See "Dedupe" below.
 - `start`/`end` are ISO 8601 (the app sends UTC with `Z`). Only their string type is checked at ingestion.
 - `sleep` may also carry `date` (wake-up date, `YYYY-MM-DD`, in the iPhone's calendar), `totalSleepMinutes`,
   `deepMinutes`, `coreMinutes`, `remMinutes`, `awakeMinutes` (each may be `null` = not recorded), `sleepStart`, `sleepEnd`.
   `value` is minutes (`unit: "min"`). These are stored and returned untouched. Legacy sleep samples without them remain valid.
 - `bodyFat`: `value` is a percentage (`23.5` = 23.5%), `unit` is `%`.
+- `heartRate` is an hourly summary: `value` is the hour's average bpm and `heartRateSummary` is
+  `{"min":number,"avg":number,"max":number,"count":number,"context":"sedentary"|"active"|"unknown"}` (`min <= avg <= max`).
+  One hour can arrive once per `context`. The in-progress hour is re-sent with updated values. A malformed `heartRateSummary` is a 400.
+  Older phones send single readings without `heartRateSummary`; they are stored as-is.
+- `restingHeartRate` and `walkingHeartRateAverage`: one sample per day, `value` in bpm, `unit` `bpm`.
 - `menstrualFlow` exists only in Local mode.
 - Invalid body: 400 `{"error":"malformed payload: expected { samples: HealthSample[] }"}`.
-- Success: every sample is appended to history; `latest[type]` is set to the last sample of that type in the
-  request; `lastPushAt` is set to the server time; response 200 `{"ok":true,"received":<n>}`.
+- Success: each sample is stored once (see "Dedupe"); `latest[type]` is updated (see "Latest"); `lastPushAt` is set to
+  the server time; response 200 `{"ok":true,"received":<n>}` (`n` counts accepted samples), plus `"rejectedTypes":[...]` if any type was unknown.
+
+### Dedupe
+
+A sample's key is its `sampleId` when it has one, otherwise `type` + `start` + `end` (timestamps compared as instants).
+A sample whose key is already stored **replaces** the stored one; it never adds a second entry. Within one request the later one wins.
+History is returned ordered by `start`, then `end`.
+
+### Latest
+
+`latest[type]` is the sample with the greatest `end`; on equal `end`, the greatest `start`; on a full tie the later arrival.
+Arrival order does not matter, so a backfill of older samples never overwrites a newer latest value.
 
 ## `GET /status`
 
-200 `{"lastPushAt": <ISO|null>, "lastQueryAt": <ISO|null>, "lastQueryTool": <"health_now"|"health_detail:<type>"|null>}`.
+200 `{"version": "1.2.0", "capabilities": [...], "lastPushAt": <ISO|null>, "lastQueryAt": <ISO|null>, "lastQueryTool": <"health_now"|"health_detail:<type>"|null>}`.
 `lastPushAt` is persisted; the other two are runtime-only.
+
+`version` and `capabilities` let the app tell receivers apart; a receiver that omits them is treated as an older one.
+Current capabilities: `bodyFat`, `restingHeartRate`, `walkingHeartRateAverage`, `heartRateSummary`, `sampleIdUpsert` (the Dedupe rule above),
+`latestByEnd` (the Latest rule above), `backfill` (safe to receive about seven days of history after pairing).
+Only advertise a capability you implement.
 
 ## `POST /mcp`
 
@@ -73,3 +96,5 @@ Both record `lastQueryAt` / `lastQueryTool`. They read only what was pushed; the
 - Minutes may be fractional: keep raw values for calculation, round (not truncate) for display.
 - `null` stage minutes mean unavailable, never 0.
 - `bodyFat.value` is already a percentage.
+- `heartRate` samples are hourly summaries (`heartRateSummary`: min/avg/max/count and `context` sedentary/active/unknown); the newest hour may be in progress.
+- `restingHeartRate` and `walkingHeartRateAverage` are separate daily values; never derive resting heart rate from `heartRate` minimums.

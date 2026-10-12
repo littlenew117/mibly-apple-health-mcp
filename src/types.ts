@@ -2,6 +2,8 @@ export const SAMPLE_TYPES = [
   "sleep",
   "steps",
   "heartRate",
+  "restingHeartRate",
+  "walkingHeartRateAverage",
   "hrv",
   "workout",
   "weight",
@@ -10,6 +12,17 @@ export const SAMPLE_TYPES = [
 ] as const;
 
 export type HealthSampleType = (typeof SAMPLE_TYPES)[number];
+
+export const HEART_RATE_CONTEXTS = ["sedentary", "active", "unknown"] as const;
+
+/** Hourly heart rate summary carried by a `heartRate` sample (`value` = avg). */
+export interface HeartRateSummary {
+  min: number;
+  avg: number;
+  max: number;
+  count: number;
+  context: (typeof HEART_RATE_CONTEXTS)[number];
+}
 
 /**
  * One reading as pushed by the iPhone. Only the fields below are validated;
@@ -24,6 +37,9 @@ export interface HealthSample {
   value: number;
   unit: string;
   source?: string;
+  /** Stable identity chosen by the phone. When present it is the dedupe key. */
+  sampleId?: string;
+  heartRateSummary?: HeartRateSummary;
   [extra: string]: unknown;
 }
 
