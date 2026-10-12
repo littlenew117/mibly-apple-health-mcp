@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dataPath } from "./config.js";
 import type { HealthSample, HealthSampleType, StoreSnapshot } from "./types.js";
 
-export const RETENTION_DAYS = 30;
+export const RETENTION_DAYS = 365;
 const MAX_HISTORY = 25_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

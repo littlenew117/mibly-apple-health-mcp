@@ -171,13 +171,15 @@ describe("MCP over Streamable HTTP", () => {
 });
 
 describe("retention", () => {
-  it("drops history older than 30 days and clamps detail queries, but keeps `latest`", async () => {
-    const old = { type: "hrv", start: iso(-40 * 86400e3), end: iso(-40 * 86400e3), value: 50, unit: "ms" };
-    assert.equal((await post("/ingest", { samples: [old] })).status, 200);
+  it("keeps 365 days of history, drops older, clamps detail queries, but keeps `latest`", async () => {
+    const recent = { type: "hrv", start: iso(-40 * 86400e3), end: iso(-40 * 86400e3), value: 50, unit: "ms" };
+    const old = { type: "hrv", start: iso(-400 * 86400e3), end: iso(-400 * 86400e3), value: 40, unit: "ms" };
+    // `old` is last in the request, so it becomes `latest` even though it is past retention.
+    assert.equal((await post("/ingest", { samples: [recent, old] })).status, 200);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(new StreamableHTTPClientTransport(new URL(BASE + "/mcp"), { requestInit: { headers: AUTH } }));
-    const r: any = await client.callTool({ name: "health_detail", arguments: { type: "hrv", start: iso(-60 * 86400e3), end: iso(0) } });
-    assert.deepEqual(JSON.parse(r.content[0].text), []);
+    const r: any = await client.callTool({ name: "health_detail", arguments: { type: "hrv", start: iso(-500 * 86400e3), end: iso(0) } });
+    assert.deepEqual(JSON.parse(r.content[0].text), [recent], "40 days old is kept, 400 days old is gone");
     const n: any = await client.callTool({ name: "health_now", arguments: {} });
     assert.deepEqual(JSON.parse(n.content[0].text).hrv, old);
     await client.close();

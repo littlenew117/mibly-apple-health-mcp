@@ -53,7 +53,7 @@ containing pretty-printed JSON (not `structuredContent`).
 - `health_now` (no arguments): the latest sample per type, flattened, plus `lastPushAt`. Types never received are absent.
   With no data: `{"lastPushAt": null}`.
 - `health_detail` (`type`, `start`, `end`, all required strings): a JSON array of stored samples of that
-  `type` whose `start` is within `[max(start, now - 30 days), end]`.
+  `type` whose `start` is within `[max(start, now - 365 days), end]`.
 
 Both record `lastQueryAt` / `lastQueryTool`. They read only what was pushed; they never contact the phone or HealthKit.
 
@@ -63,7 +63,7 @@ Both record `lastQueryAt` / `lastQueryTool`. They read only what was pushed; the
 - `~/.mibly/data.enc` (0600): `IV (12 bytes) | GCM tag (16 bytes) | ciphertext`; key = `scrypt(token, salt, 32)`,
   AES-256-GCM, fresh random IV per write. Plaintext is `{"latest":{},"history":[],"lastPushAt":null}`.
 - If the token changes: new salt, empty store. If `data.enc` is missing or undecryptable: empty store.
-- Retention after each ingest: drop history whose `end` is older than 30 days, keep at most the last 25,000 entries.
+- Retention after each ingest: drop history whose `end` is older than 365 days, keep at most the last 25,000 entries.
   `latest` is not pruned.
 
 ## Presenting the data (also embedded in the MCP tool descriptions)

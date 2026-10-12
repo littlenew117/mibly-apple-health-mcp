@@ -1,6 +1,6 @@
 {
   "name": "mibly-apple-health-mcp",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Reference Local receiver and MCP server for the Mibly iPhone app. Stores pushed Apple Health data encrypted on your own machine and exposes it to MCP agents.",
   "license": "MIT",
   "type": "module",
