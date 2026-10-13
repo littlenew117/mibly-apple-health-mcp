@@ -59,7 +59,7 @@ Arrival order does not matter, so a backfill of older samples never overwrites a
 
 ## `GET /status`
 
-200 `{"version": "1.2.0", "capabilities": [...], "lastPushAt": <ISO|null>, "lastQueryAt": <ISO|null>, "lastQueryTool": <"health_now"|"health_detail:<type>"|null>}`.
+200 `{"version": "1.2.1", "capabilities": [...], "lastPushAt": <ISO|null>, "lastQueryAt": <ISO|null>, "lastQueryTool": <"health_now"|"health_detail:<type>"|null>}`.
 `lastPushAt` is persisted; the other two are runtime-only.
 
 `version` and `capabilities` let the app tell receivers apart; a receiver that omits them is treated as an older one.
@@ -86,7 +86,7 @@ Both record `lastQueryAt` / `lastQueryTool`. They read only what was pushed; the
 - `~/.mibly/data.enc` (0600): `IV (12 bytes) | GCM tag (16 bytes) | ciphertext`; key = `scrypt(token, salt, 32)`,
   AES-256-GCM, fresh random IV per write. Plaintext is `{"latest":{},"history":[],"lastPushAt":null}`.
 - If the token changes: new salt, empty store. If `data.enc` is missing or undecryptable: empty store.
-- Retention after each ingest: drop history whose `end` is older than 365 days, keep at most the last 25,000 entries.
+- Retention after each ingest: drop history whose `end` is older than 365 days, keep at most the last 100,000 entries.
   `latest` is not pruned.
 - Upgrading from a receiver that predates `heartRateSummary`: on start-up, delete stored `heartRate` records that have no `heartRateSummary`
   (and fall back `latest.heartRate` to the newest remaining summary). Keep all other data, the token and the salt.

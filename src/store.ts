@@ -4,7 +4,7 @@ import { dataPath } from "./config.js";
 import type { HealthSample, HealthSampleType, StoreSnapshot } from "./types.js";
 
 export const RETENTION_DAYS = 365;
-const MAX_HISTORY = 25_000;
+const MAX_HISTORY = 100_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // File layout: 12-byte IV | 16-byte GCM tag | ciphertext. Key = scrypt(token, salt).
@@ -45,7 +45,7 @@ function isNewerOrSame(a: HealthSample, b: HealthSample): boolean {
 }
 
 /** Reported by GET /status so the Mibly app knows which protocol features this receiver has. */
-export const RECEIVER_VERSION = "1.2.0";
+export const RECEIVER_VERSION = "1.2.1";
 export const CAPABILITIES = [
   "bodyFat",
   "restingHeartRate",
