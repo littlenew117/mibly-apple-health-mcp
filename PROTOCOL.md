@@ -88,6 +88,8 @@ Both record `lastQueryAt` / `lastQueryTool`. They read only what was pushed; the
 - If the token changes: new salt, empty store. If `data.enc` is missing or undecryptable: empty store.
 - Retention after each ingest: drop history whose `end` is older than 365 days, keep at most the last 25,000 entries.
   `latest` is not pruned.
+- Upgrading from a receiver that predates `heartRateSummary`: on start-up, delete stored `heartRate` records that have no `heartRateSummary`
+  (and fall back `latest.heartRate` to the newest remaining summary). Keep all other data, the token and the salt.
 
 ## Presenting the data (also embedded in the MCP tool descriptions)
 

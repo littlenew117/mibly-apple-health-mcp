@@ -40,7 +40,7 @@ You don't need this code to use Mibly. The setup prompt above is the recommended
 | Where is health data stored? | `~/.mibly/data.enc` only. AES-256-GCM, key = scrypt(pairing token, random salt). |
 | Does the service make outbound network requests? | No. It only listens. No telemetry, no update check. |
 | Who can read it over the network? | Anyone holding the pairing token. Every route requires `Authorization: Bearer <token>`. |
-| How long is it kept? | 365 days of history (max 25,000 samples). Only the latest sample per type is kept longer. |
+| How long is it kept? | 365 days of history. Only the latest sample per type is kept longer. |
 | Is traffic encrypted in transit? | **No.** Local mode is designed for your home or office LAN: the iPhone and this receiver sit on the same Wi-Fi and talk plain HTTP. Don't expose the port to the public internet. |
 
 Check it yourself. This should print nothing:
@@ -73,6 +73,70 @@ Connect an MCP client over HTTP to `http://<ip>:7345/mcp` with the header `Autho
 If you regenerate the token in the app, restart with the new `MIBLY_TOKEN`. The old encrypted store can't be decrypted with the new key, so the receiver starts empty.
 
 Code map: `src/index.ts` (routes) · `src/auth.ts` (token check) · `src/config.ts` (`~/.mibly/config.json`) · `src/ingest.ts` (validation) · `src/store.ts` (encryption, retention, queries) · `src/mcp.ts` (the two tools). Run the tests with `npm test`.
+
+## Start automatically on boot
+
+The receiver should keep running after a restart. Replace the paths (and, on Linux, the user) with yours; the token is already saved in `~/.mibly/config.json`, so no env var is needed.
+
+**macOS (launchd)** — `~/Library/LaunchAgents/com.mibly.receiver.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.mibly.receiver</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/you/mibly-apple-health-mcp/dist/index.js</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+```
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mibly.receiver.plist
+```
+
+**Linux (systemd)** — `/etc/systemd/system/mibly-receiver.service`:
+
+```ini
+[Unit]
+Description=Mibly receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=you
+ExecStart=/usr/bin/node /home/you/mibly-apple-health-mcp/dist/index.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo systemctl enable --now mibly-receiver
+```
+
+Restart the machine, then confirm the receiver is back (use the IP the receiver printed):
+
+```sh
+curl -H "Authorization: Bearer <token>" http://<ip>:7345/status
+```
+
+A JSON reply with `version` and `lastPushAt` means it is running.
+
+## Upgrading from an earlier version
+
+Update in place; do not set up a second receiver.
+
+1. Pull the new code, then `npm ci && npm run build`, and restart the service.
+2. **Keep your token and data.** Do not delete `~/.mibly` and do not change the token. A new token starts an empty store.
+3. Legacy `heartRate` records (single readings without `heartRateSummary`) are deleted on start-up, because `heartRate` is now an hourly summary. Everything else is kept.
+4. Check `GET /status`: it should show the new `version` and `capabilities`.
+
+Newer Mibly app features need the matching receiver version; older apps keep working with a newer receiver.
 
 ## Local vs Cloud
 

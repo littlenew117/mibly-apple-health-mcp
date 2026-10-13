@@ -282,6 +282,34 @@ describe("dedupe, latest and heart rate types", () => {
   });
 });
 
+describe("upgrade", () => {
+  it("drops legacy heartRate (no heartRateSummary) on load, keeps other data and the token", async () => {
+    // `legacy` ends last, so it is the stored latest heartRate before the restart.
+    const legacy = { type: "heartRate", start: iso(3600e3), end: iso(7200e3), value: 72, unit: "bpm" };
+    const hourly = {
+      type: "heartRate", start: iso(-7200e3), end: iso(-3600e3), value: 70, unit: "bpm",
+      sampleId: "upgrade-test:hourly",
+      heartRateSummary: { min: 60, avg: 70, max: 80, count: 12, context: "sedentary" },
+    };
+    const weight = { type: "weight", start: iso(-5400e3), end: iso(-5400e3), value: 61.2, unit: "kg", sampleId: "upgrade-test:weight" };
+    assert.equal((await post("/ingest", { samples: [hourly, legacy, weight] })).status, 200);
+    await stop(proc);
+    proc = await start(TOKEN);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(new StreamableHTTPClientTransport(new URL(BASE + "/mcp"), { requestInit: { headers: AUTH } }));
+    const range = { start: iso(-86400e3), end: iso(86400e3) };
+    const hr: any = await client.callTool({ name: "health_detail", arguments: { type: "heartRate", ...range } });
+    const records = JSON.parse(hr.content[0].text);
+    assert.ok(records.some((r: any) => r.sampleId === "upgrade-test:hourly"), "hourly summary kept");
+    assert.ok(records.every((r: any) => r.heartRateSummary), "legacy reading removed");
+    const wt: any = await client.callTool({ name: "health_detail", arguments: { type: "weight", ...range } });
+    assert.ok(JSON.parse(wt.content[0].text).some((r: any) => r.sampleId === "upgrade-test:weight"), "other types untouched");
+    const now: any = await client.callTool({ name: "health_now", arguments: {} });
+    assert.ok(JSON.parse(now.content[0].text).heartRate.heartRateSummary, "latest falls back to a summary, not the legacy reading");
+    await client.close();
+  });
+});
+
 describe("persistence", () => {
   it("writes 0600 files in the documented format (IV12 | tag16 | ciphertext, scrypt+AES-256-GCM)", () => {
     const dir = join(home, ".mibly");

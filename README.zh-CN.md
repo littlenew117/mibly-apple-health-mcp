@@ -42,7 +42,7 @@ Apple Health 数据只能通过 HealthKit 在原生 iOS App 内读取,没有网�
 | 健康数据存在哪里? | 只存在 `~/.mibly/data.enc`。AES-256-GCM,密钥 = scrypt(配对 token, 随机 salt)。 |
 | 服务会主动发起对外网络请求吗? | 不会。它只监听。没有遥测,没有更新检查。 |
 | 谁能通过网络读取? | 持有配对 token 的人。所有路由都要求 `Authorization: Bearer <token>`。 |
-| 保留多久? | 365 天历史(最多 25,000 条样本)。每种类型只有"最新一条"会保留得更久。 |
+| 保留多久? | 365 天历史。每种类型只有"最新一条"会保留得更久。 |
 | 传输过程加密吗? | **不加密。** Local 模式是为家庭或办公室局域网设计的:iPhone 和 Receiver 在同一个 Wi-Fi 下,使用明文 HTTP 通信。不要把端口暴露到公网。 |
 
 你可以自己验证。下面的命令应该没有任何输出:
@@ -75,6 +75,70 @@ MCP 客户端通过 HTTP 连接 `http://<ip>:7345/mcp`,并带上请求头 `Autho
 如果你在 App 里重新生成了 token,请用新的 `MIBLY_TOKEN` 重启。旧的加密数据无法用新密钥解密,所以 Receiver 会从空库开始。
 
 代码地图:`src/index.ts`(路由)· `src/auth.ts`(token 校验)· `src/config.ts`(`~/.mibly/config.json`)· `src/ingest.ts`(校验)· `src/store.ts`(加密、保留、查询)· `src/mcp.ts`(两个工具)。运行测试:`npm test`。
+
+## 开机自动启动
+
+重启电脑后,Receiver 应该能自己恢复运行。请把示例里的路径(Linux 上还有用户名)换成你自己的;token 已经保存在 `~/.mibly/config.json`,不需要再设环境变量。
+
+**macOS(launchd)**——`~/Library/LaunchAgents/com.mibly.receiver.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.mibly.receiver</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/you/mibly-apple-health-mcp/dist/index.js</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+```
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mibly.receiver.plist
+```
+
+**Linux(systemd)**——`/etc/systemd/system/mibly-receiver.service`:
+
+```ini
+[Unit]
+Description=Mibly receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=you
+ExecStart=/usr/bin/node /home/you/mibly-apple-health-mcp/dist/index.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo systemctl enable --now mibly-receiver
+```
+
+重启电脑后,用 `/status` 确认服务已经回来(IP 用 Receiver 启动时打印的那个):
+
+```sh
+curl -H "Authorization: Bearer <token>" http://<ip>:7345/status
+```
+
+返回的 JSON 里有 `version` 和 `lastPushAt`,就说明它在运行。
+
+## 从旧版升级
+
+原地升级,不要另外再搭一个 Receiver。
+
+1. 拉取新代码,执行 `npm ci && npm run build`,然后重启服务。
+2. **保留 token 和数据。**不要删除 `~/.mibly`,也不要更换 token;换了 token 会从空库开始。
+3. 旧的 `heartRate` 记录(没有 `heartRateSummary` 的单次读数)会在启动时被删除,因为 `heartRate` 现在是按小时汇总。其他数据全部保留。
+4. 检查 `GET /status`:应该能看到新的 `version` 和 `capabilities`。
+
+Mibly App 的新功能需要对应版本的 Receiver;旧版 App 配新版 Receiver 仍然可以正常使用。
 
 ## Local 与 Cloud
 

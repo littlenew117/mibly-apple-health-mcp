@@ -42,7 +42,7 @@ Mibly を使うのにこのコードは必要ありません。上記のセッ�
 | ヘルスデータの保存先は? | `~/.mibly/data.enc` のみ。AES-256-GCM、鍵 = scrypt(ペアリングトークン, ランダムな salt)。 |
 | サービスは外部へ通信しますか? | いいえ。待ち受けるだけです。テレメトリも更新チェックもありません。 |
 | ネットワーク経由で読めるのは誰? | ペアリングトークンを持つ人。すべてのルートで `Authorization: Bearer <token>` が必要です。 |
-| どのくらい保持される? | 365日分の履歴(最大25,000件)。種類ごとの最新1件のみ、それより長く保持されます。 |
+| どのくらい保持される? | 365日分の履歴。種類ごとの最新1件のみ、それより長く保持されます。 |
 | 通信は暗号化される? | **いいえ。** Local モードは自宅やオフィスの LAN 向けの設計です。iPhone とこの Receiver が同じ Wi-Fi 上で平文 HTTP で通信します。ポートをインターネットに公開しないでください。 |
 
 ご自身で確認できます。次のコマンドは何も出力しないはずです。
@@ -75,6 +75,70 @@ MCP クライアントは `http://<ip>:7345/mcp` に HTTP で接続し、ヘッ�
 アプリでトークンを再生成した場合は、新しい `MIBLY_TOKEN` で再起動してください。古い暗号化データは新しい鍵では復号できないため、Receiver は空の状態から始まります。
 
 コードの構成:`src/index.ts`(ルート)· `src/auth.ts`(トークン検証)· `src/config.ts`(`~/.mibly/config.json`)· `src/ingest.ts`(検証)· `src/store.ts`(暗号化、保持、クエリ)· `src/mcp.ts`(2つのツール)。テストは `npm test` で実行します。
+
+## 起動時に自動で立ち上げる
+
+再起動後も Receiver が動き続けるようにします。パス(Linux ではユーザー名も)はご自身のものに置き換えてください。トークンは `~/.mibly/config.json` に保存済みなので、環境変数は不要です。
+
+**macOS(launchd)** — `~/Library/LaunchAgents/com.mibly.receiver.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.mibly.receiver</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/you/mibly-apple-health-mcp/dist/index.js</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+```
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mibly.receiver.plist
+```
+
+**Linux(systemd)** — `/etc/systemd/system/mibly-receiver.service`:
+
+```ini
+[Unit]
+Description=Mibly receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=you
+ExecStart=/usr/bin/node /home/you/mibly-apple-health-mcp/dist/index.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo systemctl enable --now mibly-receiver
+```
+
+マシンを再起動し、`/status` で Receiver が戻っていることを確認します(IP は Receiver が起動時に表示したものを使います)。
+
+```sh
+curl -H "Authorization: Bearer <token>" http://<ip>:7345/status
+```
+
+`version` と `lastPushAt` を含む JSON が返れば、動作しています。
+
+## 旧バージョンからのアップグレード
+
+その場で更新してください。2 つ目の Receiver は作りません。
+
+1. 新しいコードを取得し、`npm ci && npm run build` を実行して、サービスを再起動します。
+2. **トークンとデータは保持します。** `~/.mibly` を削除したり、トークンを変えたりしないでください。トークンを変えると空の状態から始まります。
+3. 旧形式の `heartRate` レコード(`heartRateSummary` のない単発の測定値)は、`heartRate` が 1 時間ごとの集計になったため、起動時に削除されます。それ以外のデータはすべて保持されます。
+4. `GET /status` を確認します。新しい `version` と `capabilities` が表示されるはずです。
+
+Mibly アプリの新機能には、対応するバージョンの Receiver が必要です。古いアプリは新しい Receiver でも引き続き使えます。
 
 ## Local と Cloud
 

@@ -56,6 +56,23 @@ export const CAPABILITIES = [
   "backfill", // safe to receive ~7 days of history after pairing
 ] as const;
 
+/**
+ * Upgrade from before heartRateSummary: heartRate used to be single readings, now it is an
+ * hourly summary, and the two must not be mixed. Remove the old ones; keep everything else.
+ */
+function dropLegacyHeartRate(snap: StoreSnapshot): StoreSnapshot {
+  const legacy = (s: HealthSample) => s.type === "heartRate" && s.heartRateSummary === undefined;
+  snap.history = snap.history.filter((s) => !legacy(s));
+  if (snap.latest.heartRate && legacy(snap.latest.heartRate)) {
+    delete snap.latest.heartRate;
+    for (const s of snap.history) {
+      const cur = snap.latest.heartRate;
+      if (s.type === "heartRate" && (!cur || isNewerOrSame(s, cur))) snap.latest.heartRate = s;
+    }
+  }
+  return snap;
+}
+
 export class HealthStore {
   private key: Buffer;
   private snapshot: StoreSnapshot;
@@ -70,7 +87,7 @@ export class HealthStore {
   private load(): StoreSnapshot {
     if (!existsSync(dataPath())) return empty();
     try {
-      return JSON.parse(decrypt(this.key, readFileSync(dataPath())));
+      return dropLegacyHeartRate(JSON.parse(decrypt(this.key, readFileSync(dataPath()))));
     } catch {
       return empty(); // undecryptable or corrupt: start empty rather than crash
     }
