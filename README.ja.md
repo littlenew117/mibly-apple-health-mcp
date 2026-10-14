@@ -1,3 +1,5 @@
+![Mibly — Apple Health for AI Agents](mibly-github.png)
+
 [English](README.md) · [简体中文](README.zh-CN.md) · **日本語**
 
 [![Download on the App Store](https://img.shields.io/badge/App_Store-Mibly-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/us/app/mibly-health-data-for-ai/id6812404098)
