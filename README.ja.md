@@ -8,6 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-server-6E56CF)](https://modelcontextprotocol.io)
 [![Website](https://img.shields.io/badge/website-mibly.app-black)](https://mibly.app)
+[![mibly-apple-health-mcp MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/littlenew117/mibly-apple-health-mcp/badges/score.svg)](https://glama.ai/mcp/servers/littlenew117/mibly-apple-health-mcp)
 
 > 内容は英語版 [README.md](README.md) が正です。
 
